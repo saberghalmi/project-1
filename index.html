@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>École coranique - Gestion des inscriptions</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+    <div class="hero">
+        <div class="title-section">
+            <h1 data-i18n="title"><i class="fas fa-quran"></i> École Coranique An-Nour</h1>
+            <p data-i18n="subtitle"><i class="fas fa-map-marker-alt"></i> Tunisie · La Marsa, Tunis | Enseignement du Coran et des sciences islamiques</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div class="lang-switch">
+                <button class="lang-btn active" data-lang="fr">FR</button>
+                <button class="lang-btn" data-lang="ar">العربية</button>
+            </div>
+            <div class="badge-stats">
+                <i class="fas fa-users"></i>
+                <span id="totalCount">0</span>
+                <span data-i18n="inscrits" style="font-weight:500;">inscrit(s)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 data-i18n="formTitle"><i class="fas fa-pen-alt"></i> Nouvelle inscription</h2>
+        <form id="registrationForm">
+            <div class="form-grid">
+                <div class="input-group">
+                    <label data-i18n="fullNameLabel"><i class="fas fa-user-graduate"></i> Nom complet *</label>
+                    <input type="text" id="fullName" data-i18n-placeholder="fullNamePlaceholder" placeholder="Nom complet de l'élève" required>
+                </div>
+                <div class="input-group">
+                    <label data-i18n="birthDateLabel"><i class="fas fa-calendar-alt"></i> Date de naissance</label>
+                    <input type="date" id="birthDate">
+                </div>
+                <div class="input-group">
+                    <label data-i18n="levelLabel"><i class="fas fa-book-quran"></i> Niveau *</label>
+                    <select id="level" required></select>
+                </div>
+                <div class="input-group">
+                    <label data-i18n="parentLabel"><i class="fas fa-user-friends"></i> Parent / Tuteur *</label>
+                    <input type="text" id="parentName" data-i18n-placeholder="parentPlaceholder" placeholder="Nom du parent" required>
+                </div>
+                <div class="input-group">
+                    <label data-i18n="phoneLabel"><i class="fas fa-phone-alt"></i> Téléphone Tunisie *</label>
+                    <input type="tel" id="phone" placeholder="+216 12 333 444" required>
+                </div>
+                <div class="input-group">
+                    <label data-i18n="emailLabel"><i class="fas fa-envelope"></i> Email</label>
+                    <input type="email" id="email" data-i18n-placeholder="emailPlaceholder" placeholder="contact@exemple.com">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="submit" id="submitBtn" class="btn btn-primary"><i class="fas fa-save"></i> <span data-i18n="submitAdd">Ajouter l'inscription</span></button>
+                <button type="button" id="cancelEditBtn" class="btn btn-secondary"><i class="fas fa-times-circle"></i> <span data-i18n="cancel">Annuler</span></button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2 data-i18n="listTitle"><i class="fas fa-list-ul"></i> Élèves inscrits</h2>
+        <div class="search-section">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" data-i18n-placeholder="searchPlaceholder" placeholder="Rechercher par nom, parent ou téléphone...">
+            </div>
+            <button id="resetSearchBtn" class="btn btn-secondary"><i class="fas fa-eraser"></i> <span data-i18n="resetSearch">Réinitialiser</span></button>
+            <button id="exportBtn" class="btn btn-secondary"><i class="fas fa-download"></i> <span data-i18n="export">Exporter JSON</span></button>
+        </div>
+        <div class="table-wrapper">
+            <table id="registrationsTable">
+                <thead>
+                <tr>
+                    <th data-sort="fullName" data-i18n="colName">Nom complet</th>
+                    <th data-sort="level" data-i18n="colLevel">Niveau</th>
+                    <th data-sort="parentName" data-i18n="colParent">Parent</th>
+                    <th data-sort="phone" data-i18n="colPhone">Téléphone</th>
+                    <th data-sort="email" data-i18n="colEmail">Email</th>
+                    <th data-sort="birthDate" data-i18n="colBirth">Naiss.</th>
+                    <th data-i18n="colActions">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="tableBody">
+                <tr class="empty-row"><td colspan="7">Aucun élève enregistré</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="color: #7a8866; font-size: 0.85rem;" id="filteredInfo"></span>
+            <button id="deleteAllBtn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> <span data-i18n="deleteAll">Supprimer toutes les inscriptions</span></button>
+        </div>
+    </div>
+    <footer>
+        <i class="fas fa-hand-sparkles"></i> <span data-i18n="footer">École coranique · Avenue Habib Bourguiba, La Marsa – Tunisie</span>
+    </footer>
+</div>
+<div id="toastMsg" class="toast-msg"></div>
+<div id="modalContainer"></div>
+
+<script>
+    (function() {
+        const i18n = {
+            fr: {
+                title: '<i class="fas fa-quran"></i> École Coranique An-Nour',
+                subtitle: '<i class="fas fa-map-marker-alt"></i> Tunisie · La Marsa, Tunis | Enseignement du Coran et des sciences islamiques',
+                inscrits: 'inscrit(s)',
+                formTitle: '<i class="fas fa-pen-alt"></i> Nouvelle inscription',
+                fullNameLabel: '<i class="fas fa-user-graduate"></i> Nom complet *',
+                fullNamePlaceholder: 'Nom complet de l\'élève',
+                birthDateLabel: '<i class="fas fa-calendar-alt"></i> Date de naissance',
+                levelLabel: '<i class="fas fa-book-quran"></i> Niveau *',
+                parentLabel: '<i class="fas fa-user-friends"></i> Parent / Tuteur *',
+                parentPlaceholder: 'Nom du parent',
+                phoneLabel: '<i class="fas fa-phone-alt"></i> Téléphone Tunisie *',
+                emailLabel: '<i class="fas fa-envelope"></i> Email',
+                emailPlaceholder: 'contact@exemple.com',
+                submitAdd: 'Ajouter l\'inscription',
+                submitUpdate: 'Mettre à jour',
+                cancel: 'Annuler',
+                listTitle: '<i class="fas fa-list-ul"></i> Élèves inscrits',
+                searchPlaceholder: 'Rechercher par nom, parent ou téléphone...',
+                resetSearch: 'Réinitialiser',
+                export: 'Exporter JSON',
+                deleteAll: 'Supprimer toutes les inscriptions',
+                colName: 'Nom complet',
+                colLevel: 'Niveau',
+                colParent: 'Parent',
+                colPhone: 'Téléphone',
+                colEmail: 'Email',
+                colBirth: 'Naiss.',
+                colActions: 'Actions',
+                footer: 'École coranique · Avenue Habib Bourguiba, La Marsa – Tunisie',
+                modalDeleteTitle: 'Confirmer la suppression',
+                modalDeleteMsg: 'Voulez-vous vraiment supprimer l\'inscription de',
+                modalDeleteAllMsg: 'Supprimer TOUTES les inscriptions ? Action irréversible.',
+                confirm: 'Confirmer',
+                cancelModal: 'Annuler',
+                toastAdded: 'Élève inscrit avec succès',
+                toastUpdated: 'Inscription mise à jour',
+                toastDeleted: 'Élève supprimé',
+                toastAllDeleted: 'Toutes les inscriptions ont été effacées',
+                toastCancelled: 'Édition annulée',
+                toastValidation: 'Veuillez remplir tous les champs obligatoires (*)',
+                toastPhoneInvalid: 'Format téléphone tunisien invalide (+216 XX XXX XXX)',
+                emptyTable: 'Aucun élève enregistré',
+                levels: [
+                    'Préparatoire',
+                    'Tajweed',
+                    'Mémorisation (Juz \'Amma)',
+                    'Hifz (Coran complet)',
+                    'Révision'
+                ],
+                defaultOption: '-- Sélectionner --'
+            },
+            ar: {
+                title: '<i class="fas fa-quran"></i> مدرسة النور القرآنية',
+                subtitle: '<i class="fas fa-map-marker-alt"></i> تونس · المرسى، تونس | تعليم القرآن والعلوم الإسلامية',
+                inscrits: 'مسجل',
+                formTitle: '<i class="fas fa-pen-alt"></i> تسجيل جديد',
+                fullNameLabel: '<i class="fas fa-user-graduate"></i> الاسم الكامل *',
+                fullNamePlaceholder: 'الاسم الكامل للتلميذ',
+                birthDateLabel: '<i class="fas fa-calendar-alt"></i> تاريخ الميلاد',
+                levelLabel: '<i class="fas fa-book-quran"></i> المستوى *',
+                parentLabel: '<i class="fas fa-user-friends"></i> ولي الأمر *',
+                parentPlaceholder: 'اسم ولي الأمر',
+                phoneLabel: '<i class="fas fa-phone-alt"></i> الهاتف (تونس) *',
+                emailLabel: '<i class="fas fa-envelope"></i> البريد الإلكتروني',
+                emailPlaceholder: 'contact@exemple.com',
+                submitAdd: 'إضافة التسجيل',
+                submitUpdate: 'تحديث',
+                cancel: 'إلغاء',
+                listTitle: '<i class="fas fa-list-ul"></i> الطلاب المسجلون',
+                searchPlaceholder: 'بحث بالاسم، ولي الأمر أو الهاتف...',
+                resetSearch: 'إعادة تعيين',
+                export: 'تصدير JSON',
+                deleteAll: 'حذف جميع التسجيلات',
+                colName: 'الاسم الكامل',
+                colLevel: 'المستوى',
+                colParent: 'ولي الأمر',
+                colPhone: 'الهاتف',
+                colEmail: 'البريد الإلكتروني',
+                colBirth: 'تاريخ الميلاد',
+                colActions: 'إجراءات',
+                footer: 'المدرسة القرآنية · شارع الحبيب بورقيبة، المرسى – تونس',
+                modalDeleteTitle: 'تأكيد الحذف',
+                modalDeleteMsg: 'هل أنت متأكد من حذف تسجيل',
+                modalDeleteAllMsg: 'حذف جميع التسجيلات؟ لا يمكن التراجع.',
+                confirm: 'تأكيد',
+                cancelModal: 'إلغاء',
+                toastAdded: 'تم تسجيل الطالب بنجاح',
+                toastUpdated: 'تم تحديث التسجيل',
+                toastDeleted: 'تم حذف الطالب',
+                toastAllDeleted: 'تم مسح جميع التسجيلات',
+                toastCancelled: 'تم إلغاء التعديل',
+                toastValidation: 'المرجو ملء جميع الحقول الإجبارية (*)',
+                toastPhoneInvalid: 'صيغة الهاتف التونسي غير صحيحة (+216 XX XXX XXX)',
+                emptyTable: 'لا يوجد طلاب مسجلون',
+                levels: [
+                    'تحضيري',
+                    'تجويد',
+                    'حفظ (جزء عم)',
+                    'حفظ القرآن كاملاً',
+                    'مراجعة'
+                ],
+                defaultOption: '-- اختر --'
+            }
+        };
+
+        let currentLang = localStorage.getItem('quranic_lang') || 'fr';
+        let registrations = [];
+        let currentEditId = null;
+        let searchTerm = "";
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        const form = document.getElementById('registrationForm');
+        const fullNameInput = document.getElementById('fullName');
+        const birthDateInput = document.getElementById('birthDate');
+        const levelSelect = document.getElementById('level');
+        const parentNameInput = document.getElementById('parentName');
+        const phoneInput = document.getElementById('phone');
+        const emailInput = document.getElementById('email');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const tableBody = document.getElementById('tableBody');
+        const searchInput = document.getElementById('searchInput');
+        const resetSearchBtn = document.getElementById('resetSearchBtn');
+        const deleteAllBtn = document.getElementById('deleteAllBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const totalSpan = document.getElementById('totalCount');
+        const filteredInfo = document.getElementById('filteredInfo');
+        const toastMsgDiv = document.getElementById('toastMsg');
+        const modalContainer = document.getElementById('modalContainer');
+
+        function t(key) {
+            return i18n[currentLang][key] || key;
+        }
+
+        function populateLevels() {
+            const levels = i18n[currentLang].levels;
+            const defaultOption = i18n[currentLang].defaultOption;
+            levelSelect.innerHTML = `<option value="">${defaultOption}</option>`;
+            levels.forEach(levelText => {
+                const option = document.createElement('option');
+                option.value = levelText;
+                option.textContent = levelText;
+                levelSelect.appendChild(option);
+            });
+            // Restore selected value if editing
+            if (currentEditId !== null) {
+                const reg = registrations.find(r => r.id === currentEditId);
+                if (reg) levelSelect.value = reg.level;
+            }
+        }
+
+        function updateUILanguage() {
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) {
+                    if (key.startsWith('col') || key === 'submitAdd' || key === 'submitUpdate' || key === 'formTitle' || key === 'listTitle' || key === 'title' || key === 'subtitle' || key === 'footer' || key === 'inscrits') {
+                        el.innerHTML = i18n[currentLang][key];
+                    } else if (el.tagName === 'INPUT' && el.hasAttribute('data-i18n-placeholder')) {
+                        el.placeholder = i18n[currentLang][key];
+                    } else if (el.tagName !== 'INPUT' && el.tagName !== 'SELECT') {
+                        el.innerHTML = i18n[currentLang][key];
+                    }
+                }
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (i18n[currentLang][key]) el.placeholder = i18n[currentLang][key];
+            });
+
+            // Update submit button if in edit mode
+            if (currentEditId !== null) {
+                submitBtn.querySelector('span').textContent = t('submitUpdate');
+            } else {
+                submitBtn.querySelector('span').textContent = t('submitAdd');
+            }
+
+            populateLevels();
+            filterAndRender();
+        }
+
+        function showToast(message, isError = false) {
+            toastMsgDiv.textContent = isError ? `⚠️ ${message}` : `✅ ${message}`;
+            toastMsgDiv.className = 'toast-msg ' + (isError ? 'error' : '');
+            toastMsgDiv.classList.add('show');
+            clearTimeout(toastMsgDiv._timeout);
+            toastMsgDiv._timeout = setTimeout(() => toastMsgDiv.classList.remove('show'), 3000);
+        }
+
+        function showModal(message, title, iconClass = 'fa-exclamation-triangle', onConfirm) {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'modal-overlay';
+                overlay.innerHTML = `
+                    <div class="modal-box">
+                        <i class="fas ${iconClass} warn"></i>
+                        <h3>${title}</h3>
+                        <p>${message}</p>
+                        <div class="modal-actions">
+                            <button class="btn btn-danger modal-confirm-btn">${t('confirm')}</button>
+                            <button class="btn btn-secondary modal-cancel-btn">${t('cancelModal')}</button>
+                        </div>
+                    </div>
+                `;
+                modalContainer.appendChild(overlay);
+
+                overlay.querySelector('.modal-confirm-btn').addEventListener('click', () => {
+                    closeModal(overlay);
+                    if (onConfirm) onConfirm();
+                    resolve(true);
+                });
+                overlay.querySelector('.modal-cancel-btn').addEventListener('click', () => {
+                    closeModal(overlay);
+                    resolve(false);
+                });
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        closeModal(overlay);
+                        resolve(false);
+                    }
+                });
+            });
+        }
+
+        function closeModal(overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+        }
+
+        function persistData() {
+            localStorage.setItem('quranic_school_data', JSON.stringify(registrations));
+        }
+
+        function loadData() {
+            const stored = localStorage.getItem('quranic_school_data');
+            if (stored) {
+                registrations = JSON.parse(stored);
+            } else {
+                registrations = [];
+                persistData();
+            }
+            updateTotalCounter();
+            filterAndRender();
+        }
+
+        function updateTotalCounter() {
+            totalSpan.textContent = registrations.length;
+        }
+
+        function getFilteredRegistrations() {
+            let filtered = [...registrations];
+            if (searchTerm.trim()) {
+                const term = searchTerm.trim().toLowerCase();
+                filtered = filtered.filter(reg =>
+                    (reg.fullName && reg.fullName.toLowerCase().includes(term)) ||
+                    (reg.parentName && reg.parentName.toLowerCase().includes(term)) ||
+                    (reg.phone && reg.phone.includes(term)) ||
+                    (reg.email && reg.email.toLowerCase().includes(term))
+                );
+            }
+            if (sortColumn) {
+                filtered.sort((a, b) => {
+                    let valA = (a[sortColumn] || '').toString().toLowerCase();
+                    let valB = (b[sortColumn] || '').toString().toLowerCase();
+                    if (sortColumn === 'birthDate') {
+                        valA = a.birthDate || '9999';
+                        valB = b.birthDate || '9999';
+                    }
+                    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+            return filtered;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[m]);
+        }
+
+        function renderTable(scrollToNewId = null) {
+            const filtered = getFilteredRegistrations();
+            filteredInfo.textContent = searchTerm.trim() || sortColumn ?
+                `${filtered.length} / ${registrations.length} affiché(s)` : '';
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('emptyTable')}</td></tr>`;
+                return;
+            }
+            let html = '';
+            filtered.forEach(reg => {
+                const birthFormatted = reg.birthDate ? new Date(reg.birthDate + 'T00:00:00').toLocaleDateString(currentLang === 'ar' ? 'ar-TN' : 'fr-FR') : '—';
+                const emailDisplay = reg.email || '—';
+                html += `
+                    <tr data-id="${reg.id}" class="${scrollToNewId === reg.id ? 'row-new' : ''}">
+                        <td><strong>${escapeHtml(reg.fullName)}</strong></td>
+                        <td>${escapeHtml(reg.level)}</td>
+                        <td>${escapeHtml(reg.parentName)}</td>
+                        <td>${escapeHtml(reg.phone)}</td>
+                        <td>${escapeHtml(emailDisplay)}</td>
+                        <td>${birthFormatted}</td>
+                        <td class="action-icons">
+                            <i class="fas fa-edit" data-id="${reg.id}" title="${currentLang === 'ar' ? 'تعديل' : 'Modifier'}"></i>
+                            <i class="fas fa-trash-alt" data-id="${reg.id}" title="${currentLang === 'ar' ? 'حذف' : 'Supprimer'}"></i>
+                        </td>
+                    </tr>
+                `;
+            });
+            tableBody.innerHTML = html;
+
+            document.querySelectorAll('.fa-edit').forEach(icon => {
+                icon.addEventListener('click', () => startEditMode(parseInt(icon.getAttribute('data-id'))));
+            });
+            document.querySelectorAll('.fa-trash-alt').forEach(icon => {
+                icon.addEventListener('click', () => deleteRegistrationById(parseInt(icon.getAttribute('data-id'))));
+            });
+
+            if (scrollToNewId) {
+                setTimeout(() => {
+                    const row = document.querySelector(`tr[data-id="${scrollToNewId}"]`);
+                    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            }
+        }
+
+        function filterAndRender(scrollId = null) {
+            renderTable(scrollId);
+            updateTotalCounter();
+            updateSortIndicators();
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('th[data-sort]').forEach(th => {
+                const col = th.getAttribute('data-sort');
+                th.classList.remove('sorted');
+                const icon = th.querySelector('i');
+                if (icon) icon.className = 'fas fa-sort';
+                if (col === sortColumn) {
+                    th.classList.add('sorted');
+                    if (icon) icon.className = sortDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                }
+            });
+        }
+
+        function resetForm() {
+            form.reset();
+            currentEditId = null;
+            submitBtn.querySelector('span').textContent = t('submitAdd');
+            submitBtn.className = 'btn btn-primary';
+            populateLevels(); // reset to default select
+        }
+
+        function startEditMode(id) {
+            const registration = registrations.find(reg => reg.id === id);
+            if (!registration) return;
+            currentEditId = id;
+            fullNameInput.value = registration.fullName || '';
+            birthDateInput.value = registration.birthDate || '';
+            // level select will be populated, then set value
+            populateLevels();
+            levelSelect.value = registration.level;
+            parentNameInput.value = registration.parentName || '';
+            phoneInput.value = registration.phone || '';
+            emailInput.value = registration.email || '';
+            submitBtn.querySelector('span').textContent = t('submitUpdate');
+            submitBtn.className = 'btn btn-warning';
+            showToast(currentLang === 'ar' ? 'وضع التعديل - قم بتغيير المعلومات' : 'Mode édition - Modifiez les informations');
+        }
+
+        function validatePhone(phone) {
+            return /^\+216\s?\d{2}\s?\d{3}\s?\d{3}$/.test(phone.trim());
+        }
+
+        function handleSubmit(e) {
+            e.preventDefault();
+            const fullName = fullNameInput.value.trim();
+            const level = levelSelect.value;
+            const parentName = parentNameInput.value.trim();
+            const phone = phoneInput.value.trim();
+
+            if (!fullName || !level || !parentName || !phone) {
+                showToast(t('toastValidation'), true);
+                return;
+            }
+            if (!validatePhone(phone)) {
+                showToast(t('toastPhoneInvalid'), true);
+                return;
+            }
+
+            const birthDate = birthDateInput.value;
+            const email = emailInput.value.trim();
+
+            if (currentEditId !== null) {
+                const index = registrations.findIndex(reg => reg.id === currentEditId);
+                if (index !== -1) {
+                    registrations[index] = { ...registrations[index], fullName, birthDate, level, parentName, phone, email };
+                    persistData();
+                    showToast(t('toastUpdated'));
+                    const updatedId = currentEditId;
+                    resetForm();
+                    filterAndRender(updatedId);
+                }
+            } else {
+                const newId = Date.now();
+                registrations.push({ id: newId, fullName, birthDate, level, parentName, phone, email });
+                persistData();
+                showToast(t('toastAdded'));
+                resetForm();
+                filterAndRender(newId);
+            }
+            searchInput.value = '';
+            searchTerm = '';
+            filterAndRender();
+        }
+
+        async function deleteRegistrationById(id) {
+            const target = registrations.find(r => r.id === id);
+            if (!target) return;
+            const display = target.fullName;
+            const confirmed = await showModal(
+                `${t('modalDeleteMsg')} <strong>${display}</strong> ?`,
+                t('modalDeleteTitle'),
+                'fa-exclamation-triangle'
+            );
+            if (confirmed) {
+                registrations = registrations.filter(reg => reg.id !== id);
+                persistData();
+                if (currentEditId === id) resetForm();
+                showToast(t('toastDeleted'));
+                filterAndRender();
+            }
+        }
+
+        async function deleteAllRegistrations() {
+            if (registrations.length === 0) {
+                showToast(currentLang === 'ar' ? 'لا توجد تسجيلات للحذف' : 'Aucune inscription à supprimer');
+                return;
+            }
+            const confirmed = await showModal(
+                t('modalDeleteAllMsg'),
+                t('modalDeleteTitle'),
+                'fa-exclamation-triangle'
+            );
+            if (confirmed) {
+                registrations = [];
+                persistData();
+                resetForm();
+                showToast(t('toastAllDeleted'));
+                searchInput.value = '';
+                searchTerm = '';
+                sortColumn = null;
+                filterAndRender();
+            }
+        }
+
+        function exportToJSON() {
+            const dataStr = JSON.stringify(registrations, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `inscriptions_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(currentLang === 'ar' ? 'تم التصدير بنجاح' : 'Exporté avec succès');
+        }
+
+        function onSearchInput() {
+            searchTerm = searchInput.value;
+            filterAndRender();
+        }
+
+        function resetSearch() {
+            searchInput.value = '';
+            searchTerm = '';
+            filterAndRender();
+            showToast(currentLang === 'ar' ? 'تمت إعادة تعيين البحث' : 'Recherche réinitialisée');
+        }
+
+        function cancelEdit() {
+            if (currentEditId !== null) {
+                resetForm();
+                showToast(t('toastCancelled'));
+            } else {
+                showToast(currentLang === 'ar' ? 'لا يوجد تعديل جارٍ' : 'Aucune édition en cours');
+            }
+        }
+
+        function handleSort(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            filterAndRender();
+        }
+
+        function bindEvents() {
+            form.addEventListener('submit', handleSubmit);
+            cancelEditBtn.addEventListener('click', cancelEdit);
+            searchInput.addEventListener('input', onSearchInput);
+            resetSearchBtn.addEventListener('click', resetSearch);
+            deleteAllBtn.addEventListener('click', deleteAllRegistrations);
+            exportBtn.addEventListener('click', exportToJSON);
+
+            document.querySelectorAll('th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    handleSort(th.getAttribute('data-sort'));
+                });
+                if (!th.querySelector('i')) {
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-sort';
+                    th.appendChild(icon);
+                }
+            });
+
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const lang = btn.getAttribute('data-lang');
+                    if (lang !== currentLang) {
+                        currentLang = lang;
+                        localStorage.setItem('quranic_lang', lang);
+                        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        updateUILanguage();
+                        showToast(lang === 'ar' ? 'تم تغيير اللغة إلى العربية' : 'Langue changée en français');
+                    }
+                });
+            });
+        }
+
+        function init() {
+            document.querySelectorAll('.lang-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-lang') === currentLang);
+            });
+            updateUILanguage();
+            loadData();
+            bindEvents();
+            resetForm();
+        }
+
+        init();
+    })();
+</script>
+</body>
+</html>
